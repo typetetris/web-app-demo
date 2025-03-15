@@ -134,7 +134,7 @@ impl Display for ChatMessage {
 pub struct ChatServer {
     // We intentionally use a std::sync::Mutex, as we never expect a
     // lock to be held while awaiting a future.
-    histories: dashmap::DashMap<ChatId, Arc<std::sync::Mutex<Vec<ChatMessage>>>>,
+    histories: Arc<dashmap::DashMap<ChatId, Arc<std::sync::Mutex<Vec<ChatMessage>>>>>,
     broadcasts: dashmap::DashMap<ChatId, tokio::sync::broadcast::Sender<ChatMessage>>,
 }
 
