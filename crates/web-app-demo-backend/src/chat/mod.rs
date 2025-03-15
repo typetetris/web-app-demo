@@ -172,17 +172,7 @@ impl ChatServer {
         Ok(())
     }
 
-    // Contract: If you got a stream by calling `join_chat`, you must call
-    // `part_chat` after you dropped the stream. Otherwise some internal
-    // state might not be cleaned up properly and a memory leak could
-    // happen.
-    //
-    // Rationale: We could wrap the returned type to implement the Drop
-    // trait and do everything `part_chat`, but I assume that would
-    // require all sorts of Pin/Unpin shenanigans. Maybe we do that later.
-    pub fn join_chat(&self, chat_id: ChatId) -> BroadcastStream<ChatMessage> {
-        // Ensure the chat exists.
-        self.histories.entry(chat_id).or_default();
+    fn join_chat_without_creating_chat(&self, chat_id: ChatId) -> BroadcastStream<ChatMessage> {
         let receiver =
             if let Some(receiver) = self.broadcasts.get(&chat_id).map(|r| r.value().subscribe()) {
                 receiver
@@ -196,6 +186,20 @@ impl ChatServer {
                 self.broadcasts.entry(chat_id).or_insert(sender).subscribe()
             };
         return BroadcastStream::new(receiver);
+    }
+
+    // Contract: If you got a stream by calling `join_chat`, you must call
+    // `part_chat` after you dropped the stream. Otherwise some internal
+    // state might not be cleaned up properly and a memory leak could
+    // happen.
+    //
+    // Rationale: We could wrap the returned type to implement the Drop
+    // trait and do everything `part_chat`, but I assume that would
+    // require all sorts of Pin/Unpin shenanigans. Maybe we do that later.
+    pub fn join_chat(&self, chat_id: ChatId) -> BroadcastStream<ChatMessage> {
+        // Ensure the chat exists.
+        self.histories.entry(chat_id).or_default();
+        self.join_chat_without_creating_chat(chat_id)
     }
 
     pub fn part_chat(&self, chat_id: ChatId) {
@@ -374,8 +378,8 @@ mod tests {
         let chat1 = ChatId::random();
         let chat2 = ChatId::random();
 
-        let mut receiver_for_chat1 = sut.join_chat(chat1);
-        let mut receiver_for_chat2 = sut.join_chat(chat2);
+        let mut receiver_for_chat1 = sut.join_chat_without_creating_chat(chat1);
+        let mut receiver_for_chat2 = sut.join_chat_without_creating_chat(chat2);
 
         let event1_chat1 = EventId::random();
         let event2_chat1 = EventId::random();
@@ -438,7 +442,7 @@ mod tests {
         expect_no_message_available!(receiver_for_chat1, "more than 2 messages available in chat1");
         expect_no_message_available!(receiver_for_chat2, "more than 2 messages available in chat2");
 
-        let chat1_history = sut.get_chat_history(chat1)?;
+        let chat1_history = sut.get_chat_history(chat1).context("history of chat1 not available")?;
         assert_eq!(chat1_history.len(), 2, "History of chat1 has not exactly 2 chat messages");
         chat1_history.iter().for_each(|chat_message| {
             assert!(
@@ -448,7 +452,7 @@ mod tests {
             );
         });
 
-        let chat2_history = sut.get_chat_history(chat2)?;
+        let chat2_history = sut.get_chat_history(chat2).context("history of chat2 not available")?;
         assert_eq!(chat2_history.len(), 2, "History of chat2 has not exactly 2 chat messages");
         chat2_history.iter().for_each(|chat_message| {
             assert!(
