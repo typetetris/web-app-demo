@@ -135,7 +135,7 @@ pub struct ChatServer {
     // We intentionally use a std::sync::Mutex, as we never expect a
     // lock to be held while awaiting a future.
     histories: Arc<dashmap::DashMap<ChatId, Arc<std::sync::Mutex<Vec<ChatMessage>>>>>,
-    broadcasts: dashmap::DashMap<ChatId, tokio::sync::broadcast::Sender<ChatMessage>>,
+    broadcasts: Arc<dashmap::DashMap<ChatId, tokio::sync::broadcast::Sender<ChatMessage>>>,
 }
 
 impl ChatServer {
