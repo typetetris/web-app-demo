@@ -244,6 +244,44 @@ mod tests {
 
     use super::*;
 
+    macro_rules! expect_no_message_available {
+        ($receiver:expr, $mesg:expr) => {
+            assert!($receiver.try_next().now_or_never().is_none(), $mesg);
+        };
+    }
+
+    macro_rules! expect_message_with_id {
+        ($receiver:expr, $event_id:expr, $mesg:expr) => {
+            let result = $receiver.try_next().now_or_never();
+            if let Some(channel_event) = result {
+                match channel_event {
+                    Ok(Some(message)) => {
+                        assert_eq!($event_id, message.event_id, "{}: wrong event id", $mesg);
+                    }
+                    Ok(None) => {
+                        panic!("{}: stream ended unexpectedly", $mesg)
+                    }
+                    Err(err) => {
+                        panic!("{}: error receiving message {err:#?}", $mesg);
+                    }
+                }
+            } else {
+                panic!("{}: no message received", $mesg);
+            }
+        };
+    }
+
+    fn test_message(chat_id: ChatId, user_id: UserId) -> ChatMessage {
+        ChatMessage {
+            event_id: EventId::random(),
+            timestamp: ChatTimestamp::epoch(),
+            chat_id,
+            user_id,
+            display_name: DisplayName::new(format!("{}", user_id)),
+            message: Message::new(format!("{}", user_id)),
+        }
+    }
+
     #[test]
     fn fetching_the_history_of_an_unknown_chat_should_fail_with_the_correct_chat_id_in_the_error_message()
      {
@@ -270,14 +308,8 @@ mod tests {
     -> anyhow::Result<()> {
         let sut = ChatServer::new();
         let chat_id = ChatId::random();
-        let message = ChatMessage {
-            event_id: EventId::random(),
-            timestamp: ChatTimestamp::epoch(),
-            chat_id,
-            user_id: UserId::random(),
-            display_name: DisplayName::new("Hugo".to_string()),
-            message: Message::new("Hello!".to_string()),
-        };
+        let user_id = UserId::random();
+        let message = test_message(chat_id, user_id);
 
         sut.send_message(message)
             .context("sending a message to an unknown chat should succeed")?;
@@ -301,33 +333,19 @@ mod tests {
     fn user_should_receive_messages_for_the_chat_they_joined() -> anyhow::Result<()> {
         let sut = ChatServer::new();
         let chat_id = ChatId::random();
-        let event_id = EventId::random();
-        let message = ChatMessage {
-            event_id,
-            timestamp: ChatTimestamp::epoch(),
-            chat_id,
-            user_id: UserId::random(),
-            display_name: DisplayName::new("Hugo".to_string()),
-            message: Message::new("Hello!".to_string()),
-        };
+        let user_id = UserId::random();
+        let message = test_message(chat_id, user_id);
+        let event_id = message.event_id;
+
         let mut receiver = sut.join_chat(chat_id);
         sut.send_message(message)
             .context("sending a message should succeed")?;
-        if let Some(message) = receiver
-            .try_next()
-            .now_or_never()
-            .context("after sending a message to a chat, it should be immediately available")?
-            .context("receiving messages for a chat should succeed")?
-        {
-            assert_eq!(
-                event_id, message.event_id,
-                "the message received from the chat should be the message sent in the test"
-            )
-        }
 
-        assert!(
-            receiver.try_next().now_or_never().is_none(),
-            "there shouldn't be any other messages for the chat, but the one sent"
+        expect_message_with_id!(receiver, event_id, "receiving the sent message");
+
+        expect_no_message_available!(
+            receiver,
+            "no message should be available, as only one was sent"
         );
 
         Ok(())
