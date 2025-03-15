@@ -493,4 +493,25 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn removing_the_last_receiver_should_cleanup_the_broadcast_map() {
+        let sut = ChatServer::new();
+        let chat_id = ChatId::random();
+        {
+            let receiver1 = sut.join_chat(chat_id);
+            {
+                let receiver2 = sut.join_chat(chat_id);
+                assert_eq!(sut.broadcasts.len(), 1, "having two receivers the chat should have a broadcast map entry");
+            }
+            // dropped receiver2, now parting the chat
+            sut.part_chat(chat_id);
+
+            assert_eq!(sut.broadcasts.len(), 1, "having one receiver the chat should have a broadcast map entry");
+        }
+        // dropped recever1, now parting the chat
+        sut.part_chat(chat_id);
+
+        assert_eq!(sut.broadcasts.len(), 0, "having now receiver any more and having called `part_chat` triggering the cleanup, there should be no broadcast map entry any more");
+    }
 }
