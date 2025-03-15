@@ -130,6 +130,7 @@ impl Display for ChatMessage {
     }
 }
 
+#[derive(Clone)]
 pub struct ChatServer {
     // We intentionally use a std::sync::Mutex, as we never expect a
     // lock to be held while awaiting a future.
@@ -153,6 +154,7 @@ impl ChatServer {
         {
             // Intentionally ignoring errors here. If no receiver is interested
             // in the message any more, we don't care.
+            #[allow(unused_must_use)]
             let _ = sender.send(message);
         }
     }
@@ -239,7 +241,7 @@ impl ChatServerErrors {
 #[cfg(test)]
 mod tests {
     use anyhow::Context;
-    use futures::FutureExt as _;
+    use futures::{FutureExt as _, future::try_join_all};
     use tokio_stream::StreamExt;
 
     use super::*;
@@ -250,30 +252,32 @@ mod tests {
         };
     }
 
-    macro_rules! expect_message_with_id {
-        ($receiver:expr, $event_id:expr, $mesg:expr) => {
-            let result = $receiver.try_next().now_or_never();
-            if let Some(channel_event) = result {
-                match channel_event {
-                    Ok(Some(message)) => {
-                        assert_eq!($event_id, message.event_id, "{}: wrong event id", $mesg);
+    macro_rules! expect_message {
+        ($receiver:expr, $mesg:expr) => {
+            {
+                let result = $receiver.try_next().now_or_never();
+                if let Some(channel_event) = result {
+                    match channel_event {
+                        Ok(Some(message)) => {
+                            message
+                        }
+                        Ok(None) => {
+                            panic!("{}: stream ended unexpectedly", $mesg)
+                        }
+                        Err(err) => {
+                            panic!("{}: error receiving message {err:#?}", $mesg);
+                        }
                     }
-                    Ok(None) => {
-                        panic!("{}: stream ended unexpectedly", $mesg)
-                    }
-                    Err(err) => {
-                        panic!("{}: error receiving message {err:#?}", $mesg);
-                    }
+                } else {
+                    panic!("{}: no message received", $mesg);
                 }
-            } else {
-                panic!("{}: no message received", $mesg);
             }
         };
     }
 
-    fn test_message(chat_id: ChatId, user_id: UserId) -> ChatMessage {
+    fn test_message(chat_id: ChatId, user_id: UserId, event_id: EventId) -> ChatMessage {
         ChatMessage {
-            event_id: EventId::random(),
+            event_id,
             timestamp: ChatTimestamp::epoch(),
             chat_id,
             user_id,
@@ -309,7 +313,8 @@ mod tests {
         let sut = ChatServer::new();
         let chat_id = ChatId::random();
         let user_id = UserId::random();
-        let message = test_message(chat_id, user_id);
+        let event_id = EventId::random();
+        let message = test_message(chat_id, user_id, event_id);
 
         sut.send_message(message)
             .context("sending a message to an unknown chat should succeed")?;
@@ -334,19 +339,124 @@ mod tests {
         let sut = ChatServer::new();
         let chat_id = ChatId::random();
         let user_id = UserId::random();
-        let message = test_message(chat_id, user_id);
-        let event_id = message.event_id;
+        let event_id = EventId::random();
+        let message = test_message(chat_id, user_id, event_id);
 
         let mut receiver = sut.join_chat(chat_id);
         sut.send_message(message)
             .context("sending a message should succeed")?;
 
-        expect_message_with_id!(receiver, event_id, "receiving the sent message");
+        let received_message = expect_message!(receiver, "receiving the sent message");
+        assert_eq!(received_message.event_id, event_id, "wrong event id received");
 
         expect_no_message_available!(
             receiver,
             "no message should be available, as only one was sent"
         );
+
+        Ok(())
+    }
+
+    fn send_test_message(sut: ChatServer, chat: ChatId, user: UserId, event_id: EventId) -> anyhow::Result<()> {
+        let message = test_message(chat, user, event_id);
+        sut.send_message(message)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn concurrently_sending_messages_to_multiple_different_chats_the_correct_chats_should_receive_the_messages_and_the_histories_should_be_correct()
+    -> anyhow::Result<()> {
+        let sut = ChatServer::new();
+
+        let user1 = UserId::random();
+        let user2 = UserId::random();
+
+        let chat1 = ChatId::random();
+        let chat2 = ChatId::random();
+
+        let mut receiver_for_chat1 = sut.join_chat(chat1);
+        let mut receiver_for_chat2 = sut.join_chat(chat2);
+
+        let event1_chat1 = EventId::random();
+        let event2_chat1 = EventId::random();
+
+        let event1_chat2 = EventId::random();
+        let event2_chat2 = EventId::random();
+
+        let barrier = Arc::new(tokio::sync::Barrier::new(4));
+
+        try_join_all(
+            [
+                (user1, chat1, event1_chat1),
+                (user2, chat2, event1_chat2),
+                (user1, chat2, event2_chat2),
+                (user2, chat1, event2_chat1),
+            ]
+            .into_iter()
+            .map(|(user, chat, event)| {
+                let sut = sut.clone();
+                let barrier = barrier.clone();
+                tokio::spawn(async move {
+                    barrier.wait().await;
+                    send_test_message(sut, chat, user, event)
+                })
+            }),
+        )
+        .await
+        .context("joining a sending job failed")?
+        .into_iter().for_each(|job_result| {
+            if let Err(err) = job_result {
+                panic!("sending message in one of the jobs failed: {err}");
+            }
+        });
+
+        let message1_for_chat1 = expect_message!(receiver_for_chat1, chat1);
+        assert!(
+            message1_for_chat1.event_id == event1_chat1 || message1_for_chat1.event_id == event2_chat1,
+            "wrong event id received on chat1 {}",
+            message1_for_chat1
+        );
+        let message2_for_chat1 = expect_message!(receiver_for_chat1, chat1);
+        assert!(
+            message2_for_chat1.event_id == event1_chat1 || message2_for_chat1.event_id == event2_chat1,
+            "wrong event id received on chat1 {}",
+            message2_for_chat1
+        );
+        let message1_for_chat2 = expect_message!(receiver_for_chat2, chat2);
+        assert!(
+            message1_for_chat2.event_id == event1_chat2 || message1_for_chat2.event_id == event2_chat2,
+            "wrong event id received on chat2 {}",
+            message1_for_chat2
+        );
+        let message2_for_chat2 = expect_message!(receiver_for_chat2, chat2);
+        assert!(
+            message2_for_chat2.event_id == event1_chat2 || message2_for_chat2.event_id == event2_chat2,
+            "wrong event id received on chat2 {}",
+            message2_for_chat2
+        );
+
+        expect_no_message_available!(receiver_for_chat1, "more than 2 messages available in chat1");
+        expect_no_message_available!(receiver_for_chat2, "more than 2 messages available in chat2");
+
+        let chat1_history = sut.get_chat_history(chat1)?;
+        assert_eq!(chat1_history.len(), 2, "History of chat1 has not exactly 2 chat messages");
+        chat1_history.iter().for_each(|chat_message| {
+            assert!(
+                chat_message.event_id == event1_chat1 || chat_message.event_id == event2_chat1,
+                "wrong event id in history of chat1 {}",
+                chat_message
+            );
+        });
+
+        let chat2_history = sut.get_chat_history(chat2)?;
+        assert_eq!(chat2_history.len(), 2, "History of chat2 has not exactly 2 chat messages");
+        chat2_history.iter().for_each(|chat_message| {
+            assert!(
+                chat_message.event_id == event1_chat2 || chat_message.event_id == event2_chat2,
+                "wrong event id in history of chat2 {}",
+                chat_message
+            );
+        });
 
         Ok(())
     }
