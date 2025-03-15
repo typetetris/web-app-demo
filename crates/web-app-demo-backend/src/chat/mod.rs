@@ -179,6 +179,8 @@ impl ChatServer {
     // trait and do everything `part_chat`, but I assume that would
     // require all sorts of Pin/Unpin shenanigans. Maybe we do that later.
     pub fn join_chat(&self, chat_id: ChatId) -> BroadcastStream<ChatMessage> {
+        // Ensure the chat exists.
+        self.histories.entry(chat_id).or_default();
         let receiver =
             if let Some(receiver) = self.broadcasts.get(&chat_id).map(|r| r.value().subscribe()) {
                 receiver

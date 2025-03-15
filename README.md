@@ -95,7 +95,7 @@ sending a message to a chat means sending the message to the broadcast.
 
    1. Have a skeleton ready - ✅
    1. Introduce ChatServer abstraction - ✅
-   1. Fix failing test
+   1. Fix failing test - ✅
    1. Add some abstractions for recurring test tasks
 
 2. Functional part of the frontend to allow interfacing the backend created in step 1. to quickly have a demostrable product.
