@@ -172,7 +172,18 @@ impl ChatServer {
         Ok(())
     }
 
-    fn join_chat_without_creating_chat(&self, chat_id: ChatId) -> BroadcastStream<ChatMessage> {
+    // Contract: If you got a stream by calling `join_chat`, you must call
+    // `part_chat` after you dropped the stream. Otherwise some internal
+    // state might not be cleaned up properly and a memory leak could
+    // happen.
+    //
+    // Rationale: We could wrap the returned type to implement the Drop
+    // trait and do everything `part_chat`, but I assume that would
+    // require all sorts of Pin/Unpin shenanigans. Maybe we do that later.
+    pub fn join_chat(&self, chat_id: ChatId) -> BroadcastStream<ChatMessage> {
+        // Ensure the chat exists.
+        self.histories.entry(chat_id).or_default();
+
         let receiver =
             if let Some(receiver) = self.broadcasts.get(&chat_id).map(|r| r.value().subscribe()) {
                 receiver
@@ -186,20 +197,6 @@ impl ChatServer {
                 self.broadcasts.entry(chat_id).or_insert(sender).subscribe()
             };
         return BroadcastStream::new(receiver);
-    }
-
-    // Contract: If you got a stream by calling `join_chat`, you must call
-    // `part_chat` after you dropped the stream. Otherwise some internal
-    // state might not be cleaned up properly and a memory leak could
-    // happen.
-    //
-    // Rationale: We could wrap the returned type to implement the Drop
-    // trait and do everything `part_chat`, but I assume that would
-    // require all sorts of Pin/Unpin shenanigans. Maybe we do that later.
-    pub fn join_chat(&self, chat_id: ChatId) -> BroadcastStream<ChatMessage> {
-        // Ensure the chat exists.
-        self.histories.entry(chat_id).or_default();
-        self.join_chat_without_creating_chat(chat_id)
     }
 
     pub fn part_chat(&self, chat_id: ChatId) {
@@ -257,26 +254,22 @@ mod tests {
     }
 
     macro_rules! expect_message {
-        ($receiver:expr, $mesg:expr) => {
-            {
-                let result = $receiver.try_next().now_or_never();
-                if let Some(channel_event) = result {
-                    match channel_event {
-                        Ok(Some(message)) => {
-                            message
-                        }
-                        Ok(None) => {
-                            panic!("{}: stream ended unexpectedly", $mesg)
-                        }
-                        Err(err) => {
-                            panic!("{}: error receiving message {err:#?}", $mesg);
-                        }
+        ($receiver:expr, $mesg:expr) => {{
+            let result = $receiver.try_next().now_or_never();
+            if let Some(channel_event) = result {
+                match channel_event {
+                    Ok(Some(message)) => message,
+                    Ok(None) => {
+                        panic!("{}: stream ended unexpectedly", $mesg)
                     }
-                } else {
-                    panic!("{}: no message received", $mesg);
+                    Err(err) => {
+                        panic!("{}: error receiving message {err:#?}", $mesg);
+                    }
                 }
+            } else {
+                panic!("{}: no message received", $mesg);
             }
-        };
+        }};
     }
 
     fn test_message(chat_id: ChatId, user_id: UserId, event_id: EventId) -> ChatMessage {
@@ -351,7 +344,10 @@ mod tests {
             .context("sending a message should succeed")?;
 
         let received_message = expect_message!(receiver, "receiving the sent message");
-        assert_eq!(received_message.event_id, event_id, "wrong event id received");
+        assert_eq!(
+            received_message.event_id, event_id,
+            "wrong event id received"
+        );
 
         expect_no_message_available!(
             receiver,
@@ -361,7 +357,12 @@ mod tests {
         Ok(())
     }
 
-    fn send_test_message(sut: ChatServer, chat: ChatId, user: UserId, event_id: EventId) -> anyhow::Result<()> {
+    fn send_test_message(
+        sut: ChatServer,
+        chat: ChatId,
+        user: UserId,
+        event_id: EventId,
+    ) -> anyhow::Result<()> {
         let message = test_message(chat, user, event_id);
         sut.send_message(message)?;
         Ok(())
@@ -378,8 +379,14 @@ mod tests {
         let chat1 = ChatId::random();
         let chat2 = ChatId::random();
 
-        let mut receiver_for_chat1 = sut.join_chat_without_creating_chat(chat1);
-        let mut receiver_for_chat2 = sut.join_chat_without_creating_chat(chat2);
+        let mut receiver_for_chat1 = {
+            let sut = sut.clone();
+            sut.join_chat(chat1)
+        };
+        let mut receiver_for_chat2 = {
+            let sut = sut.clone();
+            sut.join_chat(chat2)
+        };
 
         let event1_chat1 = EventId::random();
         let event2_chat1 = EventId::random();
@@ -408,7 +415,8 @@ mod tests {
         )
         .await
         .context("joining a sending job failed")?
-        .into_iter().for_each(|job_result| {
+        .into_iter()
+        .for_each(|job_result| {
             if let Err(err) = job_result {
                 panic!("sending message in one of the jobs failed: {err}");
             }
@@ -416,34 +424,50 @@ mod tests {
 
         let message1_for_chat1 = expect_message!(receiver_for_chat1, chat1);
         assert!(
-            message1_for_chat1.event_id == event1_chat1 || message1_for_chat1.event_id == event2_chat1,
+            message1_for_chat1.event_id == event1_chat1
+                || message1_for_chat1.event_id == event2_chat1,
             "wrong event id received on chat1 {}",
             message1_for_chat1
         );
         let message2_for_chat1 = expect_message!(receiver_for_chat1, chat1);
         assert!(
-            message2_for_chat1.event_id == event1_chat1 || message2_for_chat1.event_id == event2_chat1,
+            message2_for_chat1.event_id == event1_chat1
+                || message2_for_chat1.event_id == event2_chat1,
             "wrong event id received on chat1 {}",
             message2_for_chat1
         );
         let message1_for_chat2 = expect_message!(receiver_for_chat2, chat2);
         assert!(
-            message1_for_chat2.event_id == event1_chat2 || message1_for_chat2.event_id == event2_chat2,
+            message1_for_chat2.event_id == event1_chat2
+                || message1_for_chat2.event_id == event2_chat2,
             "wrong event id received on chat2 {}",
             message1_for_chat2
         );
         let message2_for_chat2 = expect_message!(receiver_for_chat2, chat2);
         assert!(
-            message2_for_chat2.event_id == event1_chat2 || message2_for_chat2.event_id == event2_chat2,
+            message2_for_chat2.event_id == event1_chat2
+                || message2_for_chat2.event_id == event2_chat2,
             "wrong event id received on chat2 {}",
             message2_for_chat2
         );
 
-        expect_no_message_available!(receiver_for_chat1, "more than 2 messages available in chat1");
-        expect_no_message_available!(receiver_for_chat2, "more than 2 messages available in chat2");
+        expect_no_message_available!(
+            receiver_for_chat1,
+            "more than 2 messages available in chat1"
+        );
+        expect_no_message_available!(
+            receiver_for_chat2,
+            "more than 2 messages available in chat2"
+        );
 
-        let chat1_history = sut.get_chat_history(chat1).context("history of chat1 not available")?;
-        assert_eq!(chat1_history.len(), 2, "History of chat1 has not exactly 2 chat messages");
+        let chat1_history = sut
+            .get_chat_history(chat1)
+            .context("history of chat1 not available")?;
+        assert_eq!(
+            chat1_history.len(),
+            2,
+            "History of chat1 has not exactly 2 chat messages"
+        );
         chat1_history.iter().for_each(|chat_message| {
             assert!(
                 chat_message.event_id == event1_chat1 || chat_message.event_id == event2_chat1,
@@ -452,8 +476,14 @@ mod tests {
             );
         });
 
-        let chat2_history = sut.get_chat_history(chat2).context("history of chat2 not available")?;
-        assert_eq!(chat2_history.len(), 2, "History of chat2 has not exactly 2 chat messages");
+        let chat2_history = sut
+            .get_chat_history(chat2)
+            .context("history of chat2 not available")?;
+        assert_eq!(
+            chat2_history.len(),
+            2,
+            "History of chat2 has not exactly 2 chat messages"
+        );
         chat2_history.iter().for_each(|chat_message| {
             assert!(
                 chat_message.event_id == event1_chat2 || chat_message.event_id == event2_chat2,
