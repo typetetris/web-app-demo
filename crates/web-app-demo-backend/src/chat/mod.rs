@@ -130,12 +130,11 @@ impl Display for ChatMessage {
     }
 }
 
-#[derive(Clone)]
 pub struct ChatServer {
     // We intentionally use a std::sync::Mutex, as we never expect a
     // lock to be held while awaiting a future.
-    histories: Arc<dashmap::DashMap<ChatId, Arc<std::sync::Mutex<Vec<ChatMessage>>>>>,
-    broadcasts: Arc<dashmap::DashMap<ChatId, tokio::sync::broadcast::Sender<ChatMessage>>>,
+    histories: dashmap::DashMap<ChatId, Arc<std::sync::Mutex<Vec<ChatMessage>>>>,
+    broadcasts: dashmap::DashMap<ChatId, tokio::sync::broadcast::Sender<ChatMessage>>,
 }
 
 impl ChatServer {
@@ -358,7 +357,7 @@ mod tests {
     }
 
     fn send_test_message(
-        sut: ChatServer,
+        sut: &ChatServer,
         chat: ChatId,
         user: UserId,
         event_id: EventId,
@@ -371,7 +370,7 @@ mod tests {
     #[tokio::test]
     async fn concurrently_sending_messages_to_multiple_different_chats_the_correct_chats_should_receive_the_messages_and_the_histories_should_be_correct()
     -> anyhow::Result<()> {
-        let sut = ChatServer::new();
+        let sut = Arc::new(ChatServer::new());
 
         let user1 = UserId::random();
         let user2 = UserId::random();
@@ -409,7 +408,7 @@ mod tests {
                 let barrier = barrier.clone();
                 tokio::spawn(async move {
                     barrier.wait().await;
-                    send_test_message(sut, chat, user, event)
+                    send_test_message(&sut, chat, user, event)
                 })
             }),
         )

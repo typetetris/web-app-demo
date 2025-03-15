@@ -99,7 +99,8 @@ sending a message to a chat means sending the message to the broadcast.
    1. Add some abstractions for recurring test tasks - ✅
    1. Add a test for multiple chats, users - ✅
    1. Fix the concurrency issue for the dashmaps - ✅
-   1. Fix the `ChatServer` naming and introduce `ChatServerHandles` to make ownership/behaviour of clone clearer.
+   1. Fix the `ChatServer` naming and introduce `ChatServerHandles` to make ownership/behaviour of clone clearer. - ❌
+   1. Remove `Clone` implementation from `ChatServer`.  - ✅
    1. Add a test for the broadcast cleanup
 
 2. Functional part of the frontend to allow interfacing the backend created in step 1. to quickly have a demostrable product.
