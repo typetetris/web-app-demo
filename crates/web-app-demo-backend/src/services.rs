@@ -150,6 +150,7 @@ async fn handle_incoming_stream_event(
     match stream_event {
         Some(Ok(msg)) => match msg {
             IncomingStreamEventSuccess::ChatMessage(incoming_chat_message) => {
+                tracing::debug!(?incoming_chat_message, "received");
                 if let Err(err) = chat_server.send_message(ChatMessage {
                     event_id: EventId::random(),
                     timestamp: ChatTimestamp::now(),
@@ -195,7 +196,7 @@ async fn handle_incoming_stream_event(
     ControlFlow::Continue(())
 }
 
-#[instrument(skip(chat_server, session, stream))]
+#[instrument(skip(chat_server, session, stream, broadcast))]
 pub async fn handle_websocket_connection(
     chat_id: ChatId,
     user_id: UserId,
@@ -304,14 +305,15 @@ mod tests {
         http::{StatusCode, header::Accept},
         test, web,
     };
+    use anyhow::Context;
     use futures::{SinkExt, StreamExt};
-    use tokio::time::error::Elapsed;
 
     use crate::{
         chat::{
-            models::{ChatId, ChatMessage, DisplayName, Message, UserId}, ChatServer
+            ChatServer,
+            models::{ChatId, ChatMessage, DisplayName, Message, UserId},
         },
-        services::{setup_app, IncomingChatMessage, Outgoing},
+        services::{IncomingChatMessage, Outgoing, setup_app},
     };
 
     #[test_log::test(tokio::test)]
@@ -389,12 +391,18 @@ mod tests {
             .unwrap();
 
         framed
-            .send(chat_message_as_ws_text("Hugo".to_string(), "Nachricht 1".to_string()))
+            .send(chat_message_as_ws_text(
+                "Hugo".to_string(),
+                "Nachricht 1".to_string(),
+            ))
             .await
             .unwrap();
 
         framed
-            .send(chat_message_as_ws_text("Hugo".to_string(), "Nachricht 2".to_string()))
+            .send(chat_message_as_ws_text(
+                "Hugo".to_string(),
+                "Nachricht 2".to_string(),
+            ))
             .await
             .unwrap();
 
@@ -425,10 +433,13 @@ mod tests {
         let history: Vec<ChatMessage> = history_response.json().await.unwrap();
 
         let messages: Vec<_> = history.into_iter().map(|cm| cm.message).collect();
-        pretty_assertions::assert_eq!(messages, vec![
-            Message::new("Nachricht 1".to_string()),
-            Message::new("Nachricht 2".to_string())
-        ])
+        pretty_assertions::assert_eq!(
+            messages,
+            vec![
+                Message::new("Nachricht 1".to_string()),
+                Message::new("Nachricht 2".to_string())
+            ]
+        )
     }
 
     #[test_log::test(actix_web::test)]
@@ -444,7 +455,10 @@ mod tests {
             .unwrap();
 
         framed
-            .send(chat_message_as_ws_text("Hugo".to_string(), "Nachricht 1".to_string()))
+            .send(chat_message_as_ws_text(
+                "Hugo".to_string(),
+                "Nachricht 1".to_string(),
+            ))
             .await
             .unwrap();
 
@@ -479,10 +493,18 @@ mod tests {
             .unwrap();
 
         ws_chat1
-            .send(chat_message_as_ws_text("Hugo".to_string(), "Chat 1".to_string()))
+            .send(chat_message_as_ws_text(
+                "Hugo".to_string(),
+                "Chat 1".to_string(),
+            ))
             .await
             .unwrap();
 
-        assert!(tokio::time::timeout(Duration::from_millis(100), ws_chat2.next()).await.is_err(), "didn't expect to receive a message in second chat");
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), ws_chat2.next())
+                .await
+                .is_err(),
+            "didn't expect to receive a message in second chat"
+        );
     }
 }

@@ -2,8 +2,8 @@ use anyhow::Context;
 use futures::{FutureExt as _, future::try_join_all};
 use tokio_stream::StreamExt;
 
-use super::*;
 use super::models::*;
+use super::*;
 
 macro_rules! expect_no_message_available {
     ($receiver:expr, $mesg:expr) => {
@@ -63,8 +63,7 @@ fn fetching_the_history_of_an_unknown_chat_should_fail_with_the_correct_chat_id_
 }
 
 #[test]
-fn sending_a_message_to_an_unknown_chat_should_succeed_and_create_the_chat()
--> anyhow::Result<()> {
+fn sending_a_message_to_an_unknown_chat_should_succeed_and_create_the_chat() -> anyhow::Result<()> {
     let sut = ChatServer::new();
     let chat_id = ChatId::random();
     let user_id = UserId::random();
@@ -182,29 +181,25 @@ async fn concurrently_sending_messages_to_multiple_different_chats_the_correct_c
 
     let message1_for_chat1 = expect_message!(receiver_for_chat1, chat1);
     assert!(
-        message1_for_chat1.event_id == event1_chat1
-            || message1_for_chat1.event_id == event2_chat1,
+        message1_for_chat1.event_id == event1_chat1 || message1_for_chat1.event_id == event2_chat1,
         "wrong event id received on chat1 {}",
         message1_for_chat1
     );
     let message2_for_chat1 = expect_message!(receiver_for_chat1, chat1);
     assert!(
-        message2_for_chat1.event_id == event1_chat1
-            || message2_for_chat1.event_id == event2_chat1,
+        message2_for_chat1.event_id == event1_chat1 || message2_for_chat1.event_id == event2_chat1,
         "wrong event id received on chat1 {}",
         message2_for_chat1
     );
     let message1_for_chat2 = expect_message!(receiver_for_chat2, chat2);
     assert!(
-        message1_for_chat2.event_id == event1_chat2
-            || message1_for_chat2.event_id == event2_chat2,
+        message1_for_chat2.event_id == event1_chat2 || message1_for_chat2.event_id == event2_chat2,
         "wrong event id received on chat2 {}",
         message1_for_chat2
     );
     let message2_for_chat2 = expect_message!(receiver_for_chat2, chat2);
     assert!(
-        message2_for_chat2.event_id == event1_chat2
-            || message2_for_chat2.event_id == event2_chat2,
+        message2_for_chat2.event_id == event1_chat2 || message2_for_chat2.event_id == event2_chat2,
         "wrong event id received on chat2 {}",
         message2_for_chat2
     );
@@ -257,18 +252,30 @@ async fn concurrently_sending_messages_to_multiple_different_chats_the_correct_c
 fn removing_the_last_receiver_should_cleanup_the_broadcast_map() {
     let sut = ChatServer::new();
     let chat_id = models::ChatId::random();
-    
+
     let receiver1 = sut.join_chat(chat_id);
-    
+
     let receiver2 = sut.join_chat(chat_id);
-    assert_eq!(sut.broadcasts.len(), 1, "having two receivers the chat should have a broadcast map entry");
+    assert_eq!(
+        sut.broadcasts.len(),
+        1,
+        "having two receivers the chat should have a broadcast map entry"
+    );
     drop(receiver2);
     // dropped receiver2, now parting the chat
     sut.part_chat(chat_id);
 
-    assert_eq!(sut.broadcasts.len(), 1, "having one receiver the chat should have a broadcast map entry");
+    assert_eq!(
+        sut.broadcasts.len(),
+        1,
+        "having one receiver the chat should have a broadcast map entry"
+    );
     drop(receiver1);
     // dropped recever1, now parting the chat
     sut.part_chat(chat_id);
-    assert_eq!(sut.broadcasts.len(), 0, "having now receiver any more and having called `part_chat` triggering the cleanup, there should be no broadcast map entry any more");
+    assert_eq!(
+        sut.broadcasts.len(),
+        0,
+        "having now receiver any more and having called `part_chat` triggering the cleanup, there should be no broadcast map entry any more"
+    );
 }

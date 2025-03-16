@@ -12,7 +12,8 @@ pub struct ChatServer {
     // We intentionally use a std::sync::Mutex, as we never expect a
     // lock to be held while awaiting a future.
     histories: dashmap::DashMap<models::ChatId, Arc<std::sync::Mutex<Vec<models::ChatMessage>>>>,
-    broadcasts: dashmap::DashMap<models::ChatId, tokio::sync::broadcast::Sender<models::ChatMessage>>,
+    broadcasts:
+        dashmap::DashMap<models::ChatId, tokio::sync::broadcast::Sender<models::ChatMessage>>,
 }
 
 #[allow(dead_code)]
@@ -82,7 +83,10 @@ impl ChatServer {
             .remove_if(&chat_id, |_, v| v.receiver_count() == 0);
     }
 
-    pub fn get_chat_history(&self, chat_id: models::ChatId) -> Result<Vec<models::ChatMessage>, ChatServerErrors> {
+    pub fn get_chat_history(
+        &self,
+        chat_id: models::ChatId,
+    ) -> Result<Vec<models::ChatMessage>, ChatServerErrors> {
         let history = self
             .histories
             .get(&chat_id)
