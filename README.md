@@ -4,6 +4,7 @@ This is intended to become a little web application demo.
 
 There is a lot missing (at the moment):
 
+  - Configurability in the backend like listening endpoint
   - Authentication
   - Authorization
   - Persistence, because of this, I have a memory hog for now, as histories are never expired
