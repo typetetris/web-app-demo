@@ -398,6 +398,22 @@ mod tests {
             .await
             .unwrap();
 
+        // reading the messages back, so we can be sure, they should have been added to the
+        // history now.
+
+        tokio::time::timeout(Duration::from_millis(100), framed.next())
+            .await
+            .context("sent messages not echoed back")
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        tokio::time::timeout(Duration::from_millis(100), framed.next())
+            .await
+            .context("sent messages not echoed backe")
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
         let mut history_response = app
             .get(&format!("/history/{chat_id}"))
             .insert_header(Accept::json())
