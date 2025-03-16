@@ -17,6 +17,10 @@ impl UserId {
     pub fn random() -> Self {
         Self(uuid::Uuid::new_v4())
     }
+
+    pub fn from_uuid(uuid: uuid::Uuid) -> Self {
+        Self(uuid)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -32,6 +36,10 @@ impl Display for ChatId {
 impl ChatId {
     pub fn random() -> Self {
         Self(uuid::Uuid::new_v4())
+    }
+
+    pub fn from_uuid(uuid: uuid::Uuid) -> Self {
+        Self(uuid)
     }
 }
 

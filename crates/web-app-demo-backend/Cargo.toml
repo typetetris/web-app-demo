@@ -6,10 +6,13 @@ authors = ["Eric Wolf"]
 
 [dependencies]
 actix-web = "4.10.2"
+actix-ws = "0.3.0"
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 chrono = { version = "0.4.40", features = ["serde"] }
 dashmap = "6.1.0"
+futures = "0.3.31"
 serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
 thiserror = "2.0.12"
 tokio = { version = "1.44.1", features = ["macros", "net", "rt-multi-thread", "sync", "time"] }
 tokio-stream = { version = "0.1.17", features = ["sync"] }
@@ -20,4 +23,8 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter", "tracing-lo
 uuid = { version = "1.16.0", features = ["v4", "serde"] }
 
 [dev-dependencies]
+actix-http = { version = "3.10.0", features = ["ws"] }
+actix-test = "0.1.5"
 futures = "0.3.31"
+pretty_assertions = "1.4.1"
+test-log = { version = "0.2.17", features = ["trace"] }

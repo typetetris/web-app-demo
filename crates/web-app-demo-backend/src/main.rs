@@ -1,5 +1,5 @@
-use actix_web::{App, HttpServer};
-use tracing_actix_web::TracingLogger;
+use actix_web::{web, HttpServer};
+use chat::ChatServer;
 
 mod chat;
 mod infrastructure;
@@ -10,10 +10,11 @@ pub(crate) mod util;
 async fn main() -> anyhow::Result<()> {
     infrastructure::setup_tracing_subscriber()?;
 
-    HttpServer::new(|| {
-        App::new()
-            .wrap(TracingLogger::default())
-            .service(services::hello)
+    let chat_server = ChatServer::new();
+    let app_state = web::Data::new(chat_server);
+
+    HttpServer::new(move || {
+        services::setup_app(app_state.clone())
     })
     .bind(("127.0.0.1", 8080))?
     .run()
