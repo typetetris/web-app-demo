@@ -2,6 +2,19 @@
 
 This is intended to become a little web application demo.
 
+There is a lot missing (at the moment):
+
+  - Authentication
+  - Authorization
+  - Persistence, because of this, I have a memory hog for now, as histories are never expired
+  - High Availability
+  - Thoroughly checking the backend against OWASP Top Ten (and some more maybe)
+  - Some functional user stories (all about the notes) aren't implemented yet
+  - A CI/CD pipeline
+  - A release process
+  - Some tests are flaky, because sending messages to a chat via the websocket and then
+    requesting a chat history via an endpoint is racy.
+
 ## Plan
 
 The app should provide the possiblity to chat with other people and add notes of some kind
@@ -103,10 +116,10 @@ sending a message to a chat means sending the message to the broadcast.
    1. Remove `Clone` implementation from `ChatServer` - ✅
    1. Add a test for the broadcast cleanup - ✅
    1. Split up the chat module as it gets rather unwieldy now. - ✅
-   1. Add an endpoints to
-      - get chat histories
-      - create chats
-      - join a chat (via websockts)
+   1. Add an endpoints to - ✅
+      - get chat histories - ✅
+      - create chats - ❌
+      - join a chat (via websockts) - ✅
 
 2. Functional part of the frontend to allow interfacing the backend created in step 1. to quickly have a demostrable product.
 
