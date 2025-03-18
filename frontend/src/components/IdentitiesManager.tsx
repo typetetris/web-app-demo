@@ -5,6 +5,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Identity } from "../models/Identity";
 import { AlertNotification } from "./AlertNotification";
 
+const identityListLocalStorageKey = 'web-app-demo-identity-list';
+
 export function IdentitiesManager() {
     
     // That is of course bonkers, using useState and some callbacks handling the
@@ -14,18 +16,19 @@ export function IdentitiesManager() {
     const { refetch, data, isError } = useQuery({
         queryKey: ['identities'],
         queryFn: () => {
-            const serializedIdentities = localStorage.getItem('web-app-demo-identities') ?? "[]"
+            const serializedIdentities = localStorage.getItem(identityListLocalStorageKey) ?? "[]"
             const identities = JSON.parse(serializedIdentities)
             return (identities as Identity[])
         }
     })
 
+    // Errors from the mutations are ignored at the moment. This needs to be fixed.
     const addIdentity = useMutation({
         mutationFn: async (newIdentity: Identity) => {
-            const serializedIdentities = localStorage.getItem('web-app-demo-identities') ?? "[]"
+            const serializedIdentities = localStorage.getItem(identityListLocalStorageKey) ?? "[]"
             const identities = (JSON.parse(serializedIdentities) as Identity[])
             const newIdentities = [...identities, newIdentity]
-            localStorage.setItem('web-app-demo-identities', JSON.stringify(newIdentities))
+            localStorage.setItem(identityListLocalStorageKey, JSON.stringify(newIdentities))
             refetch()
             return newIdentities
         }
@@ -33,10 +36,10 @@ export function IdentitiesManager() {
 
     const delIdentity = useMutation({
         mutationFn: async (id: string) => {
-            const serializedIdentities = localStorage.getItem('web-app-demo-identities') ?? "[]"
+            const serializedIdentities = localStorage.getItem(identityListLocalStorageKey) ?? "[]"
             const identities = (JSON.parse(serializedIdentities) as Identity[])
             const newIdentities = identities.filter((identity) => identity.id !== id)
-            localStorage.setItem('web-app-demo-identities', JSON.stringify(newIdentities))
+            localStorage.setItem(identityListLocalStorageKey, JSON.stringify(newIdentities))
             refetch()
             return newIdentities
         }
@@ -47,9 +50,7 @@ export function IdentitiesManager() {
             {isError ? (
                 <AlertNotification msg="Problem loading identities" />
             ) : null}
-            <CreateNewIdentityForm onSubmit={(newIdentity) => {
-                addIdentity.mutate(newIdentity)
-            }} />
+            <CreateNewIdentityForm onSubmit={addIdentity.mutate} />
             <IdentitiesList identities={data ?? []} onDelete={(id) => delIdentity.mutate(id)}/>
         </Flex>
     )
