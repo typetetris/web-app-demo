@@ -1,9 +1,9 @@
-import { Text, Flex, InlineAlert } from "@adobe/react-spectrum";
+import { Flex } from "@adobe/react-spectrum";
 import { IdentitiesList } from "./IdentitiesList";
 import { CreateNewIdentityForm } from "./CreateNewIdentityForm";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Identity } from "../models/Identity";
-import Alert from "@spectrum-icons/workflow/Alert";
+import { AlertNotification } from "./AlertNotification";
 
 export function IdentitiesManager() {
     
@@ -45,12 +45,7 @@ export function IdentitiesManager() {
     return (
         <Flex direction="column" gap="size-200">
             {isError ? (
-                <InlineAlert>
-                    <Flex direction='row'>
-                        <Text>Problem loading identities</Text>
-                        <Alert color='negative' justifySelf='flex-end' />
-                    </Flex>
-                </InlineAlert>
+                <AlertNotification msg="Problem loading identities" />
             ) : null}
             <CreateNewIdentityForm onSubmit={(newIdentity) => {
                 addIdentity.mutate(newIdentity)
