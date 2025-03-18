@@ -1,5 +1,6 @@
 import { Accordion, Disclosure, DisclosurePanel, DisclosureTitle, Flex, Text } from "@adobe/react-spectrum";
 import { IdentitiesManager } from "./IdentitiesManager";
+import { ChatManager } from "./ChatManager";
 
 export function Sidebar() {
     return (
@@ -13,7 +14,9 @@ export function Sidebar() {
                 </Disclosure>
                 <Disclosure id="Chats">
                     <DisclosureTitle>Chats</DisclosureTitle>
-                    <DisclosurePanel><Text>Chats</Text></DisclosurePanel>
+                    <DisclosurePanel>
+                        <ChatManager />
+                    </DisclosurePanel>
                 </Disclosure>
             </Accordion>
         </>
