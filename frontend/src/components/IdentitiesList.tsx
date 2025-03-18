@@ -1,4 +1,4 @@
-import { Item, ListView, Text, ActionButton, Selection, Key } from "@adobe/react-spectrum";
+import { Item, ListView, Text, ActionButton, Selection } from "@adobe/react-spectrum";
 import { Identity } from "../models/Identity";
 import Delete from "@spectrum-icons/workflow/Delete";
 import { useState } from "react";
@@ -47,26 +47,31 @@ export function IdentitiesList({ identities, onDelete }: IdentitiesListProps) {
         effectivelySelectedIdentity ?
             [effectivelySelectedIdentity] :
             [];
-
+    // Using the items property of ListView prevents the rerendering of the ActionButton
+    // when the size of the identities array grow from 1 to 2. Because its cached
+    // on key, which doesn't change.
+    //
+    // Revisit this later in case of performance problems.
     return identities.length > 0 ? (
         <ListView
-            items={identities}
             selectionMode="single"
             aria-label="List of Identities for chatting"
             disallowEmptySelection
             selectedKeys={new Set(selection)}
             onSelectionChange={(selection) => setSelectedIdentity(getSelectedIdentity(selection, identities))}
         >
-            {(item) => (
-                <Item textValue={item.displayName}>
-                    <Text>{item.displayName}</Text>
-                    <ActionButton
-                        onPress={() => {
-                            onDelete(item.id)
-                        }}
-                    ><Delete /></ActionButton>
-                </Item>
-            )
+            {
+                identities.map((item) => (
+                    <Item textValue={item.displayName} key={item.id}>
+                        <Text>{item.displayName}</Text>
+                        <ActionButton
+                            onPress={() => {
+                                onDelete(item.id)
+                            }}
+                            isDisabled={identities.length <= 1}
+                        ><Delete /></ActionButton>
+                    </Item>
+                ))
             }
         </ListView>
     ) : null
