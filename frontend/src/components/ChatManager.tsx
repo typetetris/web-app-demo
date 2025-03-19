@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { v4 } from "uuid";
 import { Chat } from "../models/Chat";
-import { Flex, InlineAlert, Text, View } from "@adobe/react-spectrum";
+import { Flex } from "@adobe/react-spectrum";
 import { CreateNewChatForm } from "./CreateNewChatForm";
 import { ChatList } from "./ChatList";
-import Alert from "@spectrum-icons/workflow/Alert";
 import { AlertNotification } from "./AlertNotification";
 
 const chatListLocalStorageKey = 'web-app-demo-chat-list';

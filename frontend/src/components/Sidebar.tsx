@@ -1,4 +1,4 @@
-import { Accordion, Disclosure, DisclosurePanel, DisclosureTitle, Flex, Text } from "@adobe/react-spectrum";
+import { Accordion, Disclosure, DisclosurePanel, DisclosureTitle } from "@adobe/react-spectrum";
 import { IdentitiesManager } from "./IdentitiesManager";
 import { ChatManager } from "./ChatManager";
 
