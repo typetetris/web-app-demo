@@ -37,11 +37,13 @@ export function IdentitiesList({ identities, onDelete }: IdentitiesListProps) {
         getEffectiveSelectedIdentity(null, identities)
     )
 
+    // Update the selection on a change of the identities list.
     const effectivelySelectedIdentity = getEffectiveSelectedIdentity(selectedIdentity, identities);
-
-    if (effectivelySelectedIdentity !== selectedIdentity) {
-        setSelectedIdentity(effectivelySelectedIdentity)
-    }
+    useEffect(() => {
+        if (effectivelySelectedIdentity !== selectedIdentity) {
+            setSelectedIdentity(effectivelySelectedIdentity)
+        }
+    }, [selectedIdentity, effectivelySelectedIdentity])
 
     const selection =
         effectivelySelectedIdentity ?
