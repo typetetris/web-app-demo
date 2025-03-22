@@ -1,9 +1,14 @@
 import { Header, Heading, Grid, View } from '@adobe/react-spectrum'
 import { Sidebar } from './components/Sidebar'
 import { ChatWindow } from './components/ChatWindow'
+import { Identity } from './models/Identity';
+import { useState } from 'react';
+import { Chat } from './models/Chat';
 
 
 function App() {
+  const [identity, setIdentity] = useState<Identity | null>(null);
+  const [chat, setChat] = useState<Chat | null>(null);
 
   return (
     <Grid
@@ -21,9 +26,11 @@ function App() {
         <Heading level={1}>Web App Demo</Heading>
       </Header>
       <View gridArea={'nav'}>
-        <Sidebar />
+        <Sidebar onChatChange={(chat) => setChat(chat)} onIdentityChange={(identity) => setIdentity(identity)}/>
       </View>
-      <ChatWindow gridArea={'content'} />
+      <View gridArea={'content'}>
+        <ChatWindow chat={chat} identity={identity}/>
+      </View>
     </Grid>
   )
 }

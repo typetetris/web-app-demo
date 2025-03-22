@@ -8,25 +8,11 @@ import { AlertNotification } from "./AlertNotification";
 
 const chatListLocalStorageKey = 'web-app-demo-chat-list';
 
-function saveChats(chats: Chat[]) {
-    localStorage.setItem(chatListLocalStorageKey, JSON.stringify(chats))
+export interface ChatManagerProps {
+    onChatChange: (newChat: Chat | null) => void
 }
 
-interface ErrorWithMessage {
-    msg: string,
-    error: unknown
-}
-
-function storeError(op: () => void, msg: string, storeError: (error: ErrorWithMessage | null) => void) {
-    try {
-        op();
-        storeError(null);
-    } catch (error) {
-        storeError({ msg, error })
-    }
-}
-
-export function ChatManager() {
+export function ChatManager({onChatChange}: ChatManagerProps) {
 
     // On the other hand, not using useQuery and "just" using `useState` and some
     // callbacks makes us easily forget error handling in the (ok unlikely) case
@@ -77,7 +63,6 @@ export function ChatManager() {
             setDelError
         );
 
-    console.log(chats)
     return (
         <Flex direction='column' gap="size-200">
             {
@@ -88,9 +73,27 @@ export function ChatManager() {
             <CreateNewChatForm onSubmit={addChat} />
             {
                 chats.length > 0 ? 
-                    <ChatList chats={chats} onDelete={delChat}/> :
+                    <ChatList chats={chats} onDelete={delChat} onChatChange={onChatChange}/> :
                     null
             }
         </Flex>
     )
+}
+
+function saveChats(chats: Chat[]) {
+    localStorage.setItem(chatListLocalStorageKey, JSON.stringify(chats))
+}
+
+interface ErrorWithMessage {
+    msg: string,
+    error: unknown
+}
+
+function storeError(op: () => void, msg: string, storeError: (error: ErrorWithMessage | null) => void) {
+    try {
+        op();
+        storeError(null);
+    } catch (error) {
+        storeError({ msg, error })
+    }
 }

@@ -1,11 +1,12 @@
 import { Item, ListView, Text, ActionButton, Selection } from "@adobe/react-spectrum";
 import { Identity } from "../models/Identity";
 import Delete from "@spectrum-icons/workflow/Delete";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export interface IdentitiesListProps {
     identities: Identity[],
-    onDelete: (id: string) => void
+    onDelete: (id: string) => void,
+    onIdentityChange: (newIdentity: Identity | null) => void
 }
 
 function getSelectedIdentity(selection: Selection, identities: Identity[]): string | null {
@@ -32,10 +33,15 @@ function getEffectiveSelectedIdentity(selectedIdentity: string | null, identitie
         identities[0]?.id ?? null;
 }
 
-export function IdentitiesList({ identities, onDelete }: IdentitiesListProps) {
-    const [selectedIdentity, setSelectedIdentity] = useState<string | null>(
+export function IdentitiesList({ identities, onDelete, onIdentityChange }: IdentitiesListProps) {
+    const [selectedIdentity, setSelectedIdentityRaw] = useState<string | null>(
         getEffectiveSelectedIdentity(null, identities)
     )
+    const setSelectedIdentity = useCallback((id: string | null) => {
+        const selectedIdentity = identities.find((identity) => identity.id == id) ?? null
+        setSelectedIdentityRaw(selectedIdentity?.id ?? null)
+        onIdentityChange(selectedIdentity)
+    }, [setSelectedIdentityRaw, onIdentityChange, identities])
 
     // Update the selection on a change of the identities list.
     const effectivelySelectedIdentity = getEffectiveSelectedIdentity(selectedIdentity, identities);

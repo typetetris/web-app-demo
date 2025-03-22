@@ -7,7 +7,11 @@ import { AlertNotification } from "./AlertNotification";
 
 const identityListLocalStorageKey = 'web-app-demo-identity-list';
 
-export function IdentitiesManager() {
+export interface IdentitiesManagerProps {
+    onIdentityChange: (newIdentity: Identity | null) => void
+}
+
+export function IdentitiesManager({onIdentityChange}: IdentitiesManagerProps) {
     
     // That is of course bonkers, using useState and some callbacks handling the
     // localstorage additionally would be sufficient.
@@ -51,7 +55,7 @@ export function IdentitiesManager() {
                 <AlertNotification msg="Problem loading identities" />
             ) : null}
             <CreateNewIdentityForm onSubmit={addIdentity.mutate} />
-            <IdentitiesList identities={data ?? []} onDelete={(id) => delIdentity.mutate(id)}/>
+            <IdentitiesList identities={data ?? []} onDelete={(id) => delIdentity.mutate(id)} onIdentityChange={onIdentityChange}/>
         </Flex>
     )
 }

@@ -1,8 +1,17 @@
-import { View } from "@adobe/react-spectrum";
-import { StyleProps } from "@react-types/shared";
+import { Content, Flex } from "@adobe/react-spectrum";
+import { Chat } from "../models/Chat";
+import { Identity } from "../models/Identity";
 
-export function ChatWindow(props: StyleProps) {
+export interface ChatWindowProps {
+    chat: Chat | null,
+    identity: Identity | null
+}
+
+export function ChatWindow({chat, identity}: ChatWindowProps) {
     return (
-        <View backgroundColor="purple-600" {...props} />
+        <Flex direction='column'>
+            <Content>Chat: {chat?.name ?? 'no chat selected'}</Content>
+            <Content>Identity: {identity?.displayName ?? 'no identity selectod'}</Content>
+        </Flex>
     )
 }
