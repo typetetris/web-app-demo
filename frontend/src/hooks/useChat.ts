@@ -20,7 +20,7 @@ const emptyStore: Store = {
 }
 
 function createStore(chatId: string, userId: string, displayName: string): Store {
-    let chatClientBox: ChatClientBox = {current: null};
+    const chatClientBox: ChatClientBox = {current: null};
     return {
         subscribe: (onStoreChange: () => void) => {
             chatClientBox.current = new ChatClient(chatId, userId, displayName)

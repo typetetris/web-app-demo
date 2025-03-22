@@ -49,7 +49,7 @@ export function IdentitiesList({ identities, onDelete, onIdentityChange }: Ident
         if (effectivelySelectedIdentity !== selectedIdentity) {
             setSelectedIdentity(effectivelySelectedIdentity)
         }
-    }, [selectedIdentity, effectivelySelectedIdentity])
+    }, [selectedIdentity, effectivelySelectedIdentity, setSelectedIdentity])
 
     const selection =
         effectivelySelectedIdentity ?
