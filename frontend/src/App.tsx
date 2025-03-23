@@ -1,37 +1,99 @@
-import { Header, Heading, Grid, View } from "@adobe/react-spectrum";
+import {
+  Header,
+  Heading,
+  Grid,
+  View,
+  Flex,
+  Divider,
+} from "@adobe/react-spectrum";
 import { Sidebar } from "./components/Sidebar";
 import { ChatWindow } from "./components/ChatWindow";
 import { Identity } from "./models/Identity";
 import { useState } from "react";
 import { Chat } from "./models/Chat";
+import { useChat } from "./hooks/useChat";
 
 function App() {
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [chat, setChat] = useState<Chat | null>(null);
 
   return (
-    <Grid
-      areas={["header  header", "nav content"]}
-      columns={["1fr", "3fr"]}
-      rows={["size-1000", "auto", "size-1000"]}
-      width="100wh"
-      height="100vh"
-      gap="size-100"
-    >
-      <Header gridArea={"header"} margin="size-100">
-        <Heading level={1}>Web App Demo</Heading>
-      </Header>
-      <View gridArea={"nav"}>
-        <Sidebar
-          onChatChange={(chat) => setChat(chat)}
-          onIdentityChange={(identity) => setIdentity(identity)}
-        />
-      </View>
-      <View gridArea={"content"}>
-        <ChatWindow chat={chat} identity={identity} />
-      </View>
-    </Grid>
+    <View height="100vh" width="100wh" paddingX="16px">
+      <Grid
+        areas={["header  header", "nav content", "footer footer"]}
+        columns={["1fr", "3fr"]}
+        rows={["size-1000", "auto", "size-2000"]}
+        gap="size-100"
+        height="100%"
+      >
+        <Header gridArea={"header"}>
+          <Heading level={1}>Web App Demo</Heading>
+          <Divider></Divider>
+        </Header>
+        <View gridArea={"nav"}>
+          <Sidebar
+            onChatChange={(chat) => setChat(chat)}
+            onIdentityChange={(identity) => setIdentity(identity)}
+          />
+        </View>
+        <Flex gridArea={"content"} direction="column" minHeight="100%">
+          {chat != null && identity != null ? (
+            <ChatClient chat={chat} identity={identity} />
+          ) : (
+            <IdentityOrChatMissing />
+          )}
+        </Flex>
+      </Grid>
+    </View>
   );
 }
 
 export default App;
+
+interface ChatProps {
+  chat: Chat;
+  identity: Identity;
+}
+
+function ChatClient({ chat, identity }: ChatProps) {
+  const chatClient = useChat(chat.id, identity.id, identity.displayName);
+
+  if (chatClient.isPending) {
+    return <Pending />;
+  }
+
+  if (chatClient.isClosed) {
+    return <Closed />;
+  }
+
+  if (chatClient.isError) {
+    return <Error />;
+  }
+
+  return (
+    <ChatWindow
+      messages={chatClient.messages}
+      identity={identity}
+      chat={chat}
+      height="100%"
+      marginX="size-300"
+      onSend={chatClient.send}
+    />
+  );
+}
+
+function IdentityOrChatMissing() {
+  return <h1>Please select a identity and a chat!</h1>;
+}
+
+function Pending() {
+  return <h1>Pending</h1>;
+}
+
+function Error() {
+  return <h1>Error</h1>;
+}
+
+function Closed() {
+  return <h1>Closed</h1>;
+}
