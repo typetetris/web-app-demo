@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{HttpServer, web};
 use chat::ChatServer;
 
@@ -13,9 +14,12 @@ async fn main() -> anyhow::Result<()> {
     let chat_server = ChatServer::new();
     let app_state = web::Data::new(chat_server);
 
-    HttpServer::new(move || services::setup_app(app_state.clone()))
-        .bind(("127.0.0.1", 8080))?
-        .run()
-        .await?;
+    HttpServer::new(move || {
+        let cors = Cors::permissive();
+        services::setup_app(app_state.clone()).wrap(cors)
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await?;
     Ok(())
 }
