@@ -22,8 +22,6 @@ export const pendingChatClientState = {
   },
 };
 export class ChatClient {
-  private isPending = true;
-
   private webSocketPending = true;
   private historyPending = true;
 
@@ -45,7 +43,8 @@ export class ChatClient {
   private onSnapshotChangeHandler: () => void = () => {};
   private dispatchSnapshotChange = () => {
     this.snapshot = {
-      isPending: this.isPending,
+      isPending:
+        !this.isError && (this.webSocketPending || this.historyPending),
       isError: this.isError,
       error: this.error,
       isClosed: this.isClosed,
@@ -87,9 +86,6 @@ export class ChatClient {
     }
     fetch(`${ENDPOINT}/history/${chatId}`)
       .then(async (response) => {
-        this.historyPending = false;
-        this.updatePending();
-
         if (response.status != 404 && !response.ok) {
           let errorBody = null;
           try {
@@ -112,6 +108,7 @@ export class ChatClient {
       .catch((reason) => {
         this.isError = true;
         this.error = reason;
+        this.historyPending = false;
         this.dispatchSnapshotChange();
       });
   }
@@ -144,13 +141,11 @@ export class ChatClient {
             break;
           case "Error":
             throw new Error(`error from server received: ${message.msg}`);
-            break;
           default:
             ensureNever(messageType);
             // Should be impossible, but because we casted the parsed
             // json above, we don't really know, what we got.
             throw new Error(`unknown message type received: ${message}`);
-            break;
         }
       } else {
         throw new Error(`unexpected websocket message received: ${event.data}`);
@@ -163,15 +158,8 @@ export class ChatClient {
   };
   private onOpen = (_: Event) => {
     this.webSocketPending = false;
-    this.updatePending();
+    this.dispatchSnapshotChange();
   };
-  private updatePending() {
-    const oldPending = this.isPending;
-    this.isPending = this.webSocketPending || this.historyPending;
-    if (this.isPending != oldPending) {
-      this.dispatchSnapshotChange();
-    }
-  }
   private onHistory = (history: ChatMessage[]) => {
     const combinedMessages = new Map<string, ChatMessage>();
     for (const message of history) {
@@ -184,6 +172,7 @@ export class ChatClient {
       (a: ChatMessage, b: ChatMessage) =>
         b.timestamp.getDate() - a.timestamp.getDate(),
     );
+    this.historyPending = false;
     this.dispatchSnapshotChange();
   };
   public getSnapshot(): ChatClientSnapshot {
@@ -193,7 +182,7 @@ export class ChatClient {
     const ws = this.webSocket;
     if (this.isError) {
       throw new Error("cannot send isError");
-    } else if (this.isPending) {
+    } else if (this.webSocketPending) {
       throw new Error(SEND_ON_IS_PENDING_ERROR_MESSAGE);
     } else if (this.isClosed) {
       throw new Error("cannot send isClosed");
