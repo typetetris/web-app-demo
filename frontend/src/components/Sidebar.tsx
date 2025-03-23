@@ -3,6 +3,7 @@ import {
   Disclosure,
   DisclosurePanel,
   DisclosureTitle,
+  Heading,
 } from "@adobe/react-spectrum";
 import { IdentitiesManager, IdentitiesManagerProps } from "./IdentitiesManager";
 import { ChatManager, ChatManagerProps } from "./ChatManager";
@@ -14,7 +15,11 @@ export interface SidebarProps
 export function Sidebar({ onIdentityChange, onChatChange }: SidebarProps) {
   return (
     <>
-      <Accordion allowsMultipleExpanded>
+      <Heading level={2}>Einstellungen</Heading>
+      <Accordion
+        allowsMultipleExpanded
+        defaultExpandedKeys={["Identities", "Chats"]}
+      >
         <Disclosure id="Identities">
           <DisclosureTitle>Identities</DisclosureTitle>
           <DisclosurePanel>
