@@ -2,6 +2,33 @@
 
 This is intended to become a little web application demo.
 
+## How to run it
+
+### Using pnpm
+
+1. Clone the repository
+1. Start the backend, run `cargo run -p web-app-demo-backend`
+   To get more logging, set the environment variable `RUST_LOG` to `info`. On Linux you
+   could run `RUST_LOG="info" cargo run -p web-app-demo-backend` for example.
+1. Install the frontend dependencies, run `pnpm install`
+1. Serve the frontend, run `pnpm -r run dev`
+1. Open the browser at the printed url
+1. Explore
+
+### Using npm
+
+1. Clone the repository
+1. Start the backend, run `cargo run -p web-app-demo-backend`
+   To get more logging, set the environment variable `RUST_LOG` to `info`. On Linux you
+   could run `RUST_LOG="info" cargo run -p web-app-demo-backend` for example.
+1. Install the frontend dependencies, with `./frontend` as the working directory run `npm install`.
+   On linux you could do `cd frontend; npm install` for example.
+1. Serve the frontend, with `./frontend` as the working directory run `npm dev`.
+1. Open the browser at the printed url
+1. Explore
+
+## Missing things
+
 There is a lot missing (at the moment):
 
   - Configurability in the backend like listening endpoint
@@ -9,7 +36,7 @@ There is a lot missing (at the moment):
   - Authorization
   - Persistence, because of this, I have a memory hog for now, as histories are never expired
   - High Availability
-  - Thoroughly checking the backend against OWASP Top Ten (and some more maybe)
+  - Thoroughly checking the app against OWASP Top Ten (and some more maybe)
   - Some functional user stories (all about the notes) aren't implemented yet
   - A CI/CD pipeline
   - A release process
@@ -75,7 +102,7 @@ the web application demo.
 
 We are heading for a classical architecture using a frontend, backend and a database. With some surounding
 infrastructure components. For example for authentication we will use a keycloak instance and therefore
-OAuth 2.0 and OpenID Connect in some form. 
+OAuth 2.0 and OpenID Connect in some form.
 
 The frontend and backend will communicate by establishing a web socket and maybe additional http requests
 for other things.
@@ -88,6 +115,7 @@ application, or alternatively foundationdb, because I am recently taking a look 
 - react
 - react-spectrum
 - tanstack/query
+- react-router
 
 #### Backend
 
@@ -122,7 +150,8 @@ sending a message to a chat means sending the message to the broadcast.
       - create chats - ❌
       - join a chat (via websockts) - ✅
 
-2. Functional part of the frontend to allow interfacing the backend created in step 1. to quickly have a demostrable product.
+2. Functional part of the frontend to allow interfacing the backend created in step 1. to quickly have a demostrable product. - ✅
+  1. Add all the missing error and pending views with proper react-spectrum components.
 
 3. Add authentication
     1. Add keycloak infrastructure component.
