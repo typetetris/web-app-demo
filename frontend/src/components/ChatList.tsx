@@ -9,17 +9,24 @@ import { Chat } from "../models/Chat";
 import Delete from "@spectrum-icons/workflow/Delete";
 
 export interface ChatListProps {
+  chat: Chat | null;
   chats: Chat[];
   onDelete: (id: string) => void;
   onChatChange: (newChat: Chat | null) => void;
 }
-export function ChatList({ chats, onDelete, onChatChange }: ChatListProps) {
+export function ChatList({
+  chat,
+  chats,
+  onDelete,
+  onChatChange,
+}: ChatListProps) {
   return (
     // Using the ListView items property prevents ActionButton from
     // rerendering with a new `onDelete`.
     //
     // Revisit this later in case of performance problems.
     <ListView
+      selectedKeys={chat != null ? new Set([chat.id]) : new Set([])}
       selectionMode="single"
       aria-label="List of Chats"
       onSelectionChange={(selection: Selection) => {

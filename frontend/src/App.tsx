@@ -12,10 +12,14 @@ import { Identity } from "./models/Identity";
 import { useState } from "react";
 import { Chat } from "./models/Chat";
 import { useChat } from "./hooks/useChat";
+import { useNavigate, useParams } from "react-router";
 
 function App() {
   const [identity, setIdentity] = useState<Identity | null>(null);
-  const [chat, setChat] = useState<Chat | null>(null);
+  const { chatName, chatId } = useParams();
+  const chat: Chat | null =
+    chatId != null && chatName != null ? { id: chatId, name: chatName } : null;
+  const navigate = useNavigate();
 
   return (
     <View height="100vh" width="100wh" paddingX="16px">
@@ -32,8 +36,17 @@ function App() {
         </Header>
         <View gridArea={"nav"}>
           <Sidebar
-            onChatChange={(chat) => setChat(chat)}
+            onChatChange={(chat) => {
+              let targetUrl;
+              if (chat != null) {
+                targetUrl = `/${encodeURIComponent(chat.name)}/${encodeURIComponent(chat.id)}`;
+              } else {
+                targetUrl = `/`;
+              }
+              navigate(targetUrl);
+            }}
             onIdentityChange={(identity) => setIdentity(identity)}
+            chat={chat}
           />
         </View>
         <Flex gridArea={"content"} direction="column" minHeight="100%">
@@ -58,16 +71,16 @@ interface ChatProps {
 function ChatClient({ chat, identity }: ChatProps) {
   const chatClient = useChat(chat.id, identity.id, identity.displayName);
 
+  if (chatClient.isError) {
+    throw chatClient.error;
+  }
+
   if (chatClient.isPending) {
     return <Pending />;
   }
 
   if (chatClient.isClosed) {
     return <Closed />;
-  }
-
-  if (chatClient.isError) {
-    return <Error />;
   }
 
   return (
@@ -88,10 +101,6 @@ function IdentityOrChatMissing() {
 
 function Pending() {
   return <h1>Pending</h1>;
-}
-
-function Error() {
-  return <h1>Error</h1>;
 }
 
 function Closed() {

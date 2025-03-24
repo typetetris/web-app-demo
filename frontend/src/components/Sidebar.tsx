@@ -12,7 +12,11 @@ export interface SidebarProps
   extends IdentitiesManagerProps,
     ChatManagerProps {}
 
-export function Sidebar({ onIdentityChange, onChatChange }: SidebarProps) {
+export function Sidebar({
+  onIdentityChange,
+  onChatChange,
+  chat,
+}: SidebarProps) {
   return (
     <>
       <Heading level={2}>Einstellungen</Heading>
@@ -29,7 +33,7 @@ export function Sidebar({ onIdentityChange, onChatChange }: SidebarProps) {
         <Disclosure id="Chats">
           <DisclosureTitle>Chats</DisclosureTitle>
           <DisclosurePanel>
-            <ChatManager onChatChange={onChatChange} />
+            <ChatManager onChatChange={onChatChange} chat={chat} />
           </DisclosurePanel>
         </Disclosure>
       </Accordion>

@@ -10,9 +10,10 @@ const chatListLocalStorageKey = "web-app-demo-chat-list";
 
 export interface ChatManagerProps {
   onChatChange: (newChat: Chat | null) => void;
+  chat: Chat | null;
 }
 
-export function ChatManager({ onChatChange }: ChatManagerProps) {
+export function ChatManager({ onChatChange, chat }: ChatManagerProps) {
   // On the other hand, not using useQuery and "just" using `useState` and some
   // callbacks makes us easily forget error handling in the (ok unlikely) case
   // json deserialization/serialization fails.
@@ -35,13 +36,22 @@ export function ChatManager({ onChatChange }: ChatManagerProps) {
       () => {
         const serializedChats =
           localStorage.getItem(chatListLocalStorageKey) ?? "[]";
-        const chats = JSON.parse(serializedChats) as Chat[];
+        const chatsLoaded = JSON.parse(serializedChats) as Chat[];
+        let chats;
+        if (
+          chat == null ||
+          chatsLoaded.find((loadedChat) => loadedChat.id == chat.id) != null
+        ) {
+          chats = chatsLoaded;
+        } else {
+          chats = [...chatsLoaded, chat];
+        }
         setChats(chats);
       },
       "Error loading chats.",
       setLoadError,
     );
-  }, []);
+  }, [chat]);
 
   const addChat = (name: string) =>
     storeError(
@@ -73,6 +83,7 @@ export function ChatManager({ onChatChange }: ChatManagerProps) {
       <CreateNewChatForm onSubmit={addChat} />
       {chats.length > 0 ? (
         <ChatList
+          chat={chat}
           chats={chats}
           onDelete={delChat}
           onChatChange={onChatChange}
