@@ -5,6 +5,7 @@ import {
   View,
   Flex,
   Divider,
+  ToastContainer,
 } from "@adobe/react-spectrum";
 import { Sidebar } from "./components/Sidebar";
 import { ChatWindow } from "./components/ChatWindow";
@@ -55,6 +56,14 @@ function App() {
           ) : (
             <IdentityOrChatMissing />
           )}
+        </Flex>
+        <Flex
+          gridArea="footer"
+          direction="row"
+          justifyContent="center"
+          margin="size-300"
+        >
+          <ToastContainer />
         </Flex>
       </Grid>
     </View>
